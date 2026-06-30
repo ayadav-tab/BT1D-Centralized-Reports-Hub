@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BT1D Reports Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caladea:wght@400;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0a1157;
+    --blue:#002bff;
+    --ink:#0c1024;
+    --paper:#f5f6fb;
+    --card:#ffffff;
+    --line:#e3e5f2;
+    --muted:#6b6f8c;
+    --tableau-c:#78DCFF;
+    --luminate-c:#FED7FF;
+    --salesforce-c:#545454;
+    --default-c:#C8C8C8;
+    --opal:#FED7FF;
+    --cyan:#78DCFF;
+    --lightgray:#F7F7F7;
+    --medgray:#C8C8C8;
+    --darkgray:#545454;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(900px 500px at 90% -10%, rgba(0,43,255,0.10), transparent 60%),
+      radial-gradient(700px 400px at -10% 10%, rgba(10,17,87,0.08), transparent 55%),
+      var(--paper);
+    font-family:'Noto Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Caladea', serif;}
+
+  /* ===== Top Bar ===== */
+  header{
+    background:linear-gradient(120deg, var(--navy) 0%, #131c6e 55%, var(--blue) 130%);
+    color:#fff;
+    padding:36px 6vw 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute; right:-60px; top:-80px;
+    width:300px; height:300px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,0.10), transparent 70%);
+  }
+  .eyebrow{
+    text-transform:uppercase; letter-spacing:.14em; font-size:12px;
+    color:#c7cdff; font-weight:600; margin-bottom:10px;
+  }
+  header h1{
+    font-size:clamp(28px,4vw,42px); margin:0 0 8px; font-weight:700; letter-spacing:.2px;
+  }
+  header p.sub{
+    margin:0; color:#cfd4ff; font-size:15px; max-width:620px; line-height:1.5;
+  }
+  .stats-row{
+    display:flex; gap:14px; margin-top:26px; flex-wrap:wrap;
+  }
+  .stat-pill{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    backdrop-filter:blur(6px);
+    border-radius:12px;
+    padding:12px 18px;
+    min-width:120px;
+  }
+  .stat-pill .num{font-family:'Caladea',serif; font-size:24px; font-weight:700; line-height:1;}
+  .stat-pill .lbl{font-size:11px; color:#c7cdff; text-transform:uppercase; letter-spacing:.08em; margin-top:6px;}
+  .stat-pill.src-pill{
+    border-color:rgba(255,255,255,0.18);
+    position:relative;
+    padding-left:16px;
+  }
+  .stat-pill.src-pill::before{
+    content:"";
+    position:absolute; left:0; top:10px; bottom:10px; width:4px; border-radius:4px;
+    background:var(--accent, var(--blue));
+  }
+  .stat-pill .lbl{display:flex; align-items:center; gap:6px;}
+  .src-dot-sm{width:7px; height:7px; border-radius:50%; flex:none;}
+
+  /* ===== Controls ===== */
+  .controls-wrap{
+    position:sticky; top:0; z-index:20;
+    background:rgba(245,246,251,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    padding:16px 6vw;
+  }
+  .controls{
+    display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+  }
+  .search-box{
+    flex:1 1 280px;
+    position:relative;
+  }
+  .search-box input{
+    width:100%;
+    padding:12px 16px 12px 42px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    font-family:'Noto Sans',sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .search-box input:focus{
+    outline:none; border-color:var(--blue);
+    box-shadow:0 0 0 4px rgba(0,43,255,0.12);
+  }
+  .search-box svg{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; stroke:var(--muted);
+  }
+  .filters{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .chip{
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--navy);
+    padding:9px 16px;
+    border-radius:999px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s;
+    white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--blue); color:var(--blue);}
+  .chip.active{
+    background:linear-gradient(120deg, var(--navy), var(--blue));
+    border-color:transparent;
+    color:#fff;
+  }
+  .right-tools{
+    display:flex; gap:8px; align-items:center; margin-left:auto;
+  }
+  .icon-btn{
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--navy);
+    padding:9px 14px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .icon-btn:hover{border-color:var(--blue); color:var(--blue);}
+  #fileInput{display:none;}
+
+  /* ===== Main ===== */
+  main{padding:30px 6vw 80px;}
+  .section{margin-bottom:38px;}
+  .section-head{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:16px;
+    border-bottom:2px solid var(--line); padding-bottom:10px;
+  }
+  .source-dot{width:11px; height:11px; border-radius:50%; flex:none;}
+  .section-head h2{font-size:21px; margin:0; font-weight:700; color:var(--navy);}
+  .section-head .count{
+    font-family:'Noto Sans',sans-serif; font-size:12.5px; color:var(--muted);
+    background:#eceeF9; padding:3px 10px; border-radius:999px; font-weight:600;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 18px 16px;
+    position:relative;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    display:flex; flex-direction:column; gap:10px;
+    overflow:hidden;
+  }
+  .card::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--accent, var(--blue));
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 12px 28px -10px rgba(10,17,87,0.25);
+    border-color:rgba(0,43,255,0.3);
+  }
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .card h3{
+    font-size:16.5px; margin:0; line-height:1.3; color:var(--ink); font-weight:700;
+  }
+  .src-tag{
+    font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    padding:4px 9px; border-radius:6px; white-space:nowrap; flex:none;
+    color:var(--tagtext, #fff); background:var(--accent, var(--blue));
+  }
+  .meta-row{
+    display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12.5px; color:var(--muted);
+  }
+  .meta-row span b{color:var(--ink); font-weight:600;}
+  .card-foot{
+    margin-top:auto; padding-top:10px; border-top:1px dashed var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .open-link{
+    text-decoration:none; font-weight:700; font-size:13px;
+    color:var(--blue); display:flex; align-items:center; gap:5px;
+  }
+  .open-link:hover{text-decoration:underline;}
+  .owner-tag{font-size:12px; color:var(--muted);}
+
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--muted);
+  }
+  .empty-state h3{color:var(--navy); margin-bottom:8px; font-size:19px;}
+
+  footer{
+    text-align:center; padding:26px; color:var(--muted); font-size:12.5px;
+    border-top:1px solid var(--line);
+  }
+
+  @media (max-width:640px){
+    header{padding:28px 5vw 22px;}
+    .controls{padding:0;}
+    main{padding:24px 5vw 60px;}
+    .right-tools{margin-left:0; width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">BT1D &middot; Reporting Index</div>
+  <h1>Centralized Reports Hub</h1>
+  <p class="sub">One front door to every BT1D report, pulled together from Tableau, Luminate Online, Salesforce and beyond — search by name or jump straight to a source system.</p>
+  <div class="stats-row" id="statsRow"></div>
+</header>
+
+<div class="controls-wrap">
+  <div class="controls">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Search reports by name…">
+    </div>
+    <div class="filters" id="filterChips"></div>
+  </div>
+</div>
+
+<main>
+  <div id="reportContainer"></div>
+</main>
+
+<footer>BT1D Centralized Reports Hub &middot; Data refreshed manually via uploaded source file &middot; Sources: Tableau, Luminate Online, Salesforce</footer>
+
+<script>
+// ---------- Default dummy dataset (replace by loading a file) ----------
+let reportsData = [
+  { name:"Walk Event Dashboard", link:"https://prod.westus/", source:"Tableau", dept:"Fundraising Team", owner:"Tori" },
+  { name:"Ride Event Dashboard", link:"https://prod.westus/", source:"Tableau", dept:"Fundraising Team", owner:"Tori" },
+  { name:"Donor Engagement Trends", link:"https://prod.westus/", source:"Tableau", dept:"Marketing", owner:"Priya Nair" },
+  { name:"Campaign Performance Overview", link:"https://prod.westus/", source:"Tableau", dept:"Marketing", owner:"Priya Nair" },
+  { name:"Walk Registrations", link:"https://luminateonline.com", source:"Luminate Online", dept:"Fundraising Team", owner:"Tori" },
+  { name:"Peer-to-Peer Fundraising Summary", link:"https://luminateonline.com", source:"Luminate Online", dept:"Fundraising Team", owner:"Mark Liu" },
+  { name:"Email Campaign Response Report", link:"https://luminateonline.com", source:"Luminate Online", dept:"Marketing", owner:"Sara Kim" },
+  { name:"Opportunity with Payment", link:"https://salesforce.com", source:"Salesforce", dept:"PI&A", owner:"Adam Brown" },
+  { name:"Donor 360 View", link:"https://salesforce.com", source:"Salesforce", dept:"PI&A", owner:"Adam Brown" },
+  { name:"Pipeline & Pledges Report", link:"https://salesforce.com", source:"Salesforce", dept:"Major Gifts", owner:"Elena Garcia" }
+];
+
+const sourceColors = {
+  "Tableau":"var(--tableau-c)",
+  "Luminate Online":"var(--luminate-c)",
+  "Salesforce":"var(--salesforce-c)"
+};
+function colorFor(src){ return sourceColors[src] || "var(--default-c)"; }
+function tagTextFor(src){
+  // dark text on light pastel accents, white text on dark accents
+  const darkTextSources = ["Tableau","Luminate Online"];
+  return darkTextSources.includes(src) ? "var(--navy)" : "#fff";
+}
+
+let activeFilter = "All";
+let searchTerm = "";
+
+function uniqueSources(data){
+  return [...new Set(data.map(r=>r.source))];
+}
+
+function render(){
+  renderStats();
+  renderChips();
+  renderReports();
+}
+
+function renderStats(){
+  const total = reportsData.length;
+  const sources = uniqueSources(reportsData);
+  const statsRow = document.getElementById('statsRow');
+  let html = `<div class="stat-pill"><div class="num">${total}</div><div class="lbl">Total Reports</div></div>`;
+  html += `<div class="stat-pill"><div class="num">${sources.length}</div><div class="lbl">Source Systems</div></div>`;
+  sources.forEach(src=>{
+    const count = reportsData.filter(r=>r.source===src).length;
+    html += `<div class="stat-pill src-pill" style="--accent:${colorFor(src)}">
+      <div class="num">${count}</div>
+      <div class="lbl"><span class="src-dot-sm" style="background:${colorFor(src)}"></span>${src}</div>
+    </div>`;
+  });
+  statsRow.innerHTML = html;
+}
+
+function renderChips(){
+  const sources = uniqueSources(reportsData);
+  const chips = ["All", ...sources];
+  const wrap = document.getElementById('filterChips');
+  wrap.innerHTML = chips.map(s=>
+    `<button class="chip ${s===activeFilter?'active':''}" data-src="${s}">${s}</button>`
+  ).join('');
+  wrap.querySelectorAll('.chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeFilter = btn.getAttribute('data-src');
+      render();
+    });
+  });
+}
+
+function renderReports(){
+  const container = document.getElementById('reportContainer');
+  const term = searchTerm.trim().toLowerCase();
+
+  let filtered = reportsData.filter(r=>{
+    const matchesSearch = !term || r.name.toLowerCase().includes(term);
+    const matchesFilter = activeFilter==="All" || r.source===activeFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  if(filtered.length===0){
+    container.innerHTML = `<div class="empty-state"><h3>No reports found</h3><p>Try a different search term or filter.</p></div>`;
+    return;
+  }
+
+  // group by source, in order of first appearance / unique sources list
+  const sources = activeFilter==="All" ? uniqueSources(reportsData) : [activeFilter];
+  let html = "";
+  sources.forEach(src=>{
+    const items = filtered.filter(r=>r.source===src);
+    if(items.length===0) return;
+    html += `
+      <section class="section">
+        <div class="section-head">
+          <span class="source-dot" style="background:${colorFor(src)}"></span>
+          <h2>${src}</h2>
+          <span class="count">${items.length} report${items.length>1?'s':''}</span>
+        </div>
+        <div class="grid">
+          ${items.map(r=>`
+            <div class="card" style="--accent:${colorFor(src)}; --tagtext:${tagTextFor(src)}">
+              <div class="card-top">
+                <h3>${escapeHtml(r.name)}</h3>
+                <span class="src-tag">${escapeHtml(r.source)}</span>
+              </div>
+              <div class="meta-row">
+                ${r.dept ? `<span>Dept: <b>${escapeHtml(r.dept)}</b></span>` : ""}
+              </div>
+              <div class="card-foot">
+                <a class="open-link" href="${escapeAttr(r.link)}" target="_blank" rel="noopener">Open report →</a>
+                ${r.owner ? `<span class="owner-tag">${escapeHtml(r.owner)}</span>` : ""}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  searchTerm = e.target.value;
+  renderReports();
+});
+
+// ---------- Auto-load reports from local file (same folder) ----------
+const CANDIDATE_FILES = ["reports.xlsx", "reports.xls", "reports.csv"];
+
+function mapRows(rows){
+  return rows.map(row=>{
+    const get = (keys)=>{
+      for(const k of keys){
+        const found = Object.keys(row).find(rk=>rk.trim().toLowerCase()===k);
+        if(found) return row[found];
+      }
+      return "";
+    };
+    return {
+      name: get(["report name","name"]),
+      link: get(["link","url"]),
+      source: get(["source","source system"]),
+      dept: get(["department","dept"]),
+      owner: get(["owner"])
+    };
+  }).filter(r=>r.name);
+}
+
+async function loadLocalReportsFile(){
+  for(const filename of CANDIDATE_FILES){
+    try{
+      const res = await fetch(filename);
+      if(!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+      const mapped = mapRows(rows);
+      if(mapped.length){
+        reportsData = mapped;
+        render();
+      }
+      return;
+    }catch(err){
+      // try next candidate filename
+    }
+  }
+}
+
+loadLocalReportsFile();
+
+render();
+</script>
+</body>
+</html>
